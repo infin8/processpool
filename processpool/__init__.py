@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import traceback, threading
-from glob import glob
 from multiprocessing import Pool, Manager
 from itertools import islice
 

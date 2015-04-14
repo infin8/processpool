@@ -1,5 +1,5 @@
 # ProcessPool
-reusable pool class for simplifying the use of multiprocessing in python
+reusable multiprocessing pool class for python
 
 ## Install
 
@@ -23,7 +23,9 @@ iterable = range(100)
 
 start = time() 
 
-for i, result in enumerate(p.run(iterable, dowork)):
+p.run(iterable, dowork)
+
+for i, result in enumerate(p.results()):
     i+=1
     seconds = time() - start
     persecond = i/seconds

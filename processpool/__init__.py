@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import traceback, threading
+import traceback, threading, uuid
 from multiprocessing import Pool, Manager
 from itertools import islice
+
+FINISHED = str(uuid.uuid4())
 
 class ProcessPool(object):
     def __init__(self, concurrency=4, num=10000, qmax=None):
         self.concurrency = concurrency
         self.num = num
+        self.t = None
         
         self.qmax = qmax if qmax is not None else self.num*10
             
@@ -28,31 +31,36 @@ class ProcessPool(object):
         return self.o.get()
 
     def results(self):
-        for result in iter(self.get, None):
+        for result in iter(self.o.get, FINISHED):
             yield result
             
-    def run(self, iterable, f, *args, **kwargs):
+    def _run(self, f, iterable, *args, **kwargs):
         self.start()
         
         for rows in xslice(iterable, self.num):
             self.put(f, *((rows,)+args), **kwargs)
 
         self.finish()
+        try:
+            self.join()
+        except: 
+            #not sure how to elegantly handle exiting before the thread is 
+            #finished
+            pass
         
-        t = threading.Thread(target=self.join)
-        t.daemon = True
-        t.start()
-        
-        return self.results()
+    def run(self, *args, **kwargs):
+        self.t = threading.Thread(target=self._run, args=args, kwargs=kwargs)
+        self.t.daemon = True
+        self.t.start()
 
     def finish(self, *args, **kwargs):
-        [self.i.put(None) for w in self.workers]
+        [self.i.put(FINISHED) for w in self.workers]
     
     def join(self, *args, **kwargs):
         self.i.join()
         self.pool.close()
         self.pool.join()
-        self.o.put(None)
+        self.o.put(FINISHED)
 
 def worker(i,o):
     try:
@@ -61,7 +69,7 @@ def worker(i,o):
         traceback.print_exc()
         
 def work(i, o): 
-    for w, args, kwargs in iter(i.get, None):
+    for w, args, kwargs in iter(i.get, FINISHED):
         if w: o.put(w(*args))
         i.task_done()
     i.task_done()

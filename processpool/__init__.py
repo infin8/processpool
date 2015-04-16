@@ -76,7 +76,9 @@ def work(i, o):
 
 def xslice(iterable, size):
     x = iter(iterable)
+    del iterable
     item = list(islice(x, size))
     while item:
         yield item
         item = list(islice(x, size))
+    del x
